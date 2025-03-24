@@ -34,11 +34,11 @@ def Request_Box(s, box_Num):
         return False
     
 #Guess
-#takes in socket object and player's guess
+#takes in socket object, player's guess and box number
 #return true if server responds with 1 (guess is correct)
 #return false otherwise
-def Guess(s, guess):
-    s.send("Guess," + guess.encode())
+def Guess(s, guess, box_Num):
+    s.send("Guess," + guess + "," + box_Num.encode())
     data = s.recv(1024).decode()
     if data == "1":
         return True
