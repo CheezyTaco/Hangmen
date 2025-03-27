@@ -3,13 +3,26 @@ import random
 
 words = ["banana", "cherry", "apple"]
 
+def check_ans(char_dict):
+    for i in char_dict:
+        if i == 0: return False
+    return True
+
 def main():
     # Choose a random word
     word = random.choice(words)
+    word_size = len(word)
+
     box_size = 50  # Size of each square box
     gap = 5  # Gap between boxes
     start_x = 100  # Starting x position
     y = 100  # Fixed y position
+
+    # This keep tracks of which player correctly guessed the character at ith index
+    # If all integers in points are non-zero, the word is guessed and game will end (for now)
+    points = [0] * word_size
+    print(word)
+    print(points)
 
     # Create a list to store Rect objects for each box
     boxes = []
@@ -61,6 +74,17 @@ def main():
                         # Add the typed character to the active box
                         if len(text[active_box_index]) < 1:  # Limit to one character per box
                             text[active_box_index] += event.unicode
+
+                            if text[active_box_index] == word[active_box_index]:
+                                points[active_box_index] = 1
+                            else:
+                                text[active_box_index] = text[active_box_index][:-1]
+
+                print(points)
+                if check_ans(points):
+                    print("DONE")
+                    done = True
+                    break
 
         # Clear the screen
         screen.fill((30, 30, 30))
