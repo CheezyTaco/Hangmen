@@ -29,6 +29,12 @@ def main():
     print(word)
     print(points)
 
+    # This keep tracks of which player correctly guessed the character at ith index
+    # If all integers in points are non-zero, the word is guessed and game will end (for now)
+    points = [0] * word_size
+    print(word)
+    print(points)
+
     # Create a list to store Rect objects for each box
     boxes = []
     for i, letter in enumerate(word):
@@ -74,7 +80,6 @@ def main():
                     if text[i]: 
                         fullbox_text[i] = text[i]
 
-
                 # Check if any box was clicked
                 for i, box in enumerate(boxes):
                     if box.collidepoint(event.pos):
@@ -85,13 +90,7 @@ def main():
                         active_box_index = None  # No box was clicked
 
                 # check if user clicked fullbox and reset fullbox
-                if active_box_index is None:
-                    
-
-                    
-                         
-              
-
+                if active_box_index is None:                   
                     for i,box in enumerate(fullbox):
                         if box.collidepoint(event.pos):
                             for i in range(len(fullbox_text)):
@@ -101,8 +100,6 @@ def main():
                         else:
                             fullbox_active = False
                         
-
-
             # Handle keyboard input
             if event.type == pg.KEYDOWN:
                 if active_box_index is not None:
@@ -119,8 +116,8 @@ def main():
 
                             if text[active_box_index] == word[active_box_index]:
                                 points[active_box_index] = 1
+
                                 fullbox_text[active_box_index] += event.unicode
-                     
 
                             else:
                                 text[active_box_index] = text[active_box_index][:-1]
@@ -133,18 +130,9 @@ def main():
                                 fullbox_text[i] = event.unicode
                                 if fullbox_text[i] == word[i]:
                                     fullbox_points[i] = 1
-                                
-                                
-                                
+                
                                 break  
-                        
-                            
-                        
-                        
-
-
-                    
-
+                                
                 print(points)
          
                 print(fullbox_points)
@@ -162,8 +150,6 @@ def main():
                     print("FULLBOX GUESSER WON " + str(guessing_fullbox_points) + " POINTS")
                     done = True
                     break
-
-                
 
         # Clear the screen
         screen.fill((30, 30, 30))
