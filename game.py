@@ -159,7 +159,7 @@ def main():
             color = color_active if i == active_box_index else color_inactive
             pg.draw.rect(screen, color, box, 2)
 
-            # Render the text for the current box
+            # Render the text for the current box.
             txt_surface = font.render(text[i], True, color)
             screen.blit(txt_surface, (box.x + 10, box.y + 10))
 
