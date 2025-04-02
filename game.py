@@ -135,12 +135,12 @@ def main():
                             if text[active_box_index] == word[active_box_index]:  # The guess is correct
 
                                 # Client call to send updates to all players for correctly guessed character
-                                # Request_Update(sfd) // may need to include which ith box is correctly guessed
+                                # Guess(sfd, word[active_box_index, active_box_index)
 
                                 points[active_box_index] = 1
                                 fullbox_text[active_box_index] += event.unicode
 
-                                # Client call to release box?
+                                # Client call to release box? // after Guess function, server can release it
 
                             else:  # The guessed character is incorrect
                                 text[active_box_index] = text[active_box_index][:-1]
