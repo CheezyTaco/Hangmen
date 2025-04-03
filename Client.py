@@ -15,7 +15,7 @@ def Connect(serverIP, port):
 #return false otherwise
 def client_Ready(s, pname):
     s.send("Client_Ready," + pname.encode())
-    data = s.recv(1024).decode()
+    data = s.recv(1024).decode('utf-8')
     if data == "1":
         return True
     else:
@@ -26,8 +26,9 @@ def client_Ready(s, pname):
 #return true if server responds with 1 (box is available)
 #return false otherwise
 def Request_Box(s, box_Num):
-    s.send("Request_Box," + box_Num.encode())
-    data = s.recv(1024).decode()
+    msg = f"Request_Box,{box_Num}"
+    s.send(msg.encode('utf-8'))
+    data = s.recv(1024).decode('utf-8')
     if data == "1":
         return True
     else:
@@ -38,8 +39,9 @@ def Request_Box(s, box_Num):
 #return true if server responds with 1 (guess is correct)
 #return false otherwise
 def Guess(s, guess, box_Num):
-    s.send("Guess," + guess + "," + box_Num.encode())
-    data = s.recv(1024).decode()
+    msg = f"Guess,{guess},{box_Num}"
+    s.send(msg.encode('utf-8'))
+    data = s.recv(1024).decode('utf-8')
     if data == "1":
         return True
     else:
@@ -49,9 +51,20 @@ def Guess(s, guess, box_Num):
 #takes in socket object
 #return server response
 def Request_Update(s):
-    s.send("Request_Update")
-    data = s.recv(1024).decode()
+    msg = f"Request_Update,dummy"
+    s.send(msg.encode('utf-8'))
+    data = s.recv(1024).decode('utf-8')
     return data
+
+def get_word(s):
+    msg = f"get_word,dummy"
+    s.send(msg.encode('utf-8'))
+    data = s.recv(1024).decode('utf-8')
+    return data
+
+def unlock_box(s):
+    msg = f"unlock_box,dummy"
+    s.send(msg.encode('utf-8'))
 
 #Disconnect
 #takes in socket object

@@ -1,9 +1,10 @@
 import pygame as pg
 import random
-import Client
+from Client import *
 
 words = ["banana", "cherry", "apple"]
-
+serverIP = '127.0.0.1'
+port = 5555
 
 # Takes a point array and checks if each character is correctly guessed.
 def check_ans(char_dict):
@@ -14,12 +15,18 @@ def check_ans(char_dict):
 
 def main():
     # Connect to the server
-    # sfd = Connect(serverIP, Port)
+    
+    global serverIP
+    global port
+    sfd = Connect(serverIP, port)
+    print("Connected to server")
+
+    # Client receives the random word from Server
+    word = get_word(sfd)
 
     # Tell server that the player is ready
     # client_Ready(sfd, name)
 
-    word = random.choice(words)  # Choose a random word  // server side variable?
     word_size = len(word)  # Size of word          // server side variable?
 
     box_size = 50  # Size of each square box
@@ -37,9 +44,6 @@ def main():
 
     print(word)
     print(points)
-
-    # Client receives the random word from Server
-    #
 
     # Create a list to store Rect objects for each character box
     boxes = []
@@ -72,14 +76,18 @@ def main():
     fullbox_active = False
 
     # Game loop
+    print("Game initialized")
     done = False
+
     while not done:
+
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 done = True
 
             # Handle mouse click
             if event.type == pg.MOUSEBUTTONDOWN:
+                unlock_box(sfd)
                 active_box_index = None
 
                 # Fills guessed characters in each box
@@ -94,11 +102,12 @@ def main():
                     if box.collidepoint(event.pos):
 
                         # Client calls to check if this box is available
-                        # if (Request_Box(sfd, i)):
-
-                        fullbox_active = False
-                        active_box_index = i  # Set the active box
-                        break
+                        if (Request_Box(sfd, str(i))):
+                            fullbox_active = False
+                            active_box_index = i  # Set the active box
+                            break
+                        else:
+                            print("Box already taken")
                     else:
                         active_box_index = None  # No box was clicked
 
@@ -135,7 +144,7 @@ def main():
                             if text[active_box_index] == word[active_box_index]:  # The guess is correct
 
                                 # Client call to send updates to all players for correctly guessed character
-                                # Guess(sfd, word[active_box_index, active_box_index)
+                                Guess(sfd, word[active_box_index], str(active_box_index))
 
                                 points[active_box_index] = 1
                                 fullbox_text[active_box_index] += event.unicode
@@ -156,9 +165,6 @@ def main():
 
                                 break
 
-                print(points)
-                print(fullbox_points)
-
                 # Should the server check the answers?
 
                 if check_ans(
@@ -177,17 +183,28 @@ def main():
                     done = True
                     break
 
+                print(points)
+                print(guessed_box)
+
         # Clear the screen
         screen.fill((30, 30, 30))
 
+        # Update 'text' and 'fullbox_text' with boxes
+        guessed_box = Request_Update(sfd)
+        for i in range(word_size):
+            if int(guessed_box[i]) != 0:
+                points[i] = 1
+                text[i] = word[i]
+        
         # Draw all boxes
         for i, box in enumerate(boxes):
             color = color_active if i == active_box_index else color_inactive
             pg.draw.rect(screen, color, box, 2)
 
             # Render the text for the current box
-            txt_surface = font.render(text[i], True, color)
-            screen.blit(txt_surface, (box.x + 10, box.y + 10))
+            if points[i]:
+                txt_surface = font.render(text[i], True, (255, 255, 255))
+                screen.blit(txt_surface, (box.x + 10, box.y + 10))
 
         for i, box in enumerate(fullbox):
             color = color_active if fullbox_active is True else color_inactive
