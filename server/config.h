@@ -1,7 +1,7 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#define PORT_NUM 8080
+#define PORT_NUM 5555
 #define DICT_PATH "dictionary3.txt"
 #define DEFAULT_CLIENT_COUNT 4
 #define BOX_TIMEOUT_MS 5000
