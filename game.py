@@ -22,7 +22,7 @@ def main():
     print("Connected to server")
 
     # Client receives the random word from Server
-    word = get_word(sfd)
+    word = Get_Word(sfd)
 
     # Tell server that the player is ready
     # client_Ready(sfd, name)
@@ -87,7 +87,7 @@ def main():
 
             # Handle mouse click
             if event.type == pg.MOUSEBUTTONDOWN:
-                unlock_box(sfd)
+                Unlock_Box(sfd)
                 active_box_index = None
 
                 # Fills guessed characters in each box
