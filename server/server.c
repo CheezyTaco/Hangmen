@@ -74,7 +74,7 @@ static void server_init(server_t *server, uint16_t port, size_t num_clients)
                    sizeof(int)) < 0)
         handle_error("set sockopt");
 
-    // bind accept socket to localhost on the provided port
+    // bind socket to localhost on the provided port
     if ((bind(server->socket_fd,
               (struct sockaddr *)&(struct sockaddr_in){
                   .sin_family = AF_INET,
