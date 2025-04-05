@@ -6,7 +6,7 @@ from Client import *
 words = ["banana", "cherry", "apple"]
 SERVER_IP = "127.0.0.1"
 PORT = 5555
-REQUEST_RATE_NS = 250000000
+REQUEST_RATE = 0.25
 
 
 # Takes a point array and checks if each character is correctly guessed.
@@ -74,7 +74,8 @@ def main():
     # Store text for each box individual box and the full box in the same list
     text = [""] * (word_size * 2)
 
-    last_update_request = 0
+    last_update_at = 0
+    box_locked_at = 0
 
     my_points = 0
     others_points = 0
@@ -116,6 +117,7 @@ def main():
                         Unlock_Box(sfd)
                         if Request_Box(sfd, str(collided_lock_index)):
                             print("got lock ", collided_index)
+                            box_locked_at = time.monotonic()
                             active_box_index = collided_index
                         else:
                             active_box_index = None
@@ -165,8 +167,16 @@ def main():
         # Clear the screen
         screen.fill((30, 30, 30))
 
+        # timeout lock after 5 seconds
+        if active_box_index is not None and time.monotonic() - box_locked_at > 5:
+            if active_box_index in range(word_size, word_size *2):
+                text[word_size:] = [""] * word_size
+            else:
+                text[active_box_index] = ""
+            active_box_index = None
+
         # Update letter boxes (limit requests to avoid overloading server)
-        if time.monotonic_ns() - last_update_request > REQUEST_RATE_NS:
+        if time.monotonic() - last_update_at > REQUEST_RATE:
             guess_state = Request_Update(sfd)
 
             left_to_guess = 0
@@ -185,7 +195,7 @@ def main():
                 print("You have", int(my_points * 100 / word_size), "points")
                 done = True
 
-            last_update_request = time.monotonic_ns()
+            last_update_at = time.monotonic()
 
         # Draw all boxes
         for i, box in enumerate(boxes):
