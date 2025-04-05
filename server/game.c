@@ -1,17 +1,10 @@
+#include "config.h"
 #include "game.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-
-#define TIMEOUT_MS 10000
-
-#if 1
-#define DEBUG_LOG(...) printf(__VA_ARGS__);
-#else
-#define DEBUG_LOG(...)
-#endif
 
 typedef struct
 {
@@ -47,11 +40,12 @@ static void init_locks(game_t *game)
     for (size_t i = 0; i <= game->wlen; i++)
     {
         game->locks[i] = (boxlock_t){
-            .mtx = PTHREAD_MUTEX_INITIALIZER,
             .owned_at_time = 0,
             .owner = NULL,
             .prev_owner = NULL,
         };
+
+        pthread_mutex_init(&game->locks[i].mtx, NULL);
     }
 }
 
@@ -108,7 +102,7 @@ void **game_get_player_ids(game_t *game)
 
 void update_lock_timeout(boxlock_t *lock)
 {
-    if (lock->owner && (timestamp_ms() - lock->owned_at_time > TIMEOUT_MS))
+    if (lock->owner && (timestamp_ms() - lock->owned_at_time > BOX_TIMEOUT_MS))
     {
         lock->prev_owner = lock->owner;
         lock->owner = NULL;
@@ -153,7 +147,7 @@ bool game_request_box(game_t *game, void *player_id, unsigned int box_index)
         ret = true;
     }
 
-    pthread_mutex_unlock(&game->locks[box_index].mtx);
+    pthread_mutex_unlock(&lock->mtx);
 
     return ret;
 }
@@ -224,8 +218,10 @@ void game_unlock_boxes(game_t *game, void *player_id)
         update_lock_timeout(lock);
 
         if (lock->owner == player_id)
+        {
             lock->prev_owner = lock->owner;
-        lock->owner = NULL;
+            lock->owner = NULL;
+        }
 
         pthread_mutex_unlock(&lock->mtx);
     }

@@ -162,9 +162,15 @@ static void *client_handler(void *arg)
         if (!strcmp(token->name, "Request_Box"))
         {
             if (game_request_box(server->game, client, token->payloads[0].int_val))
+            {
+                DEBUG_LOG("box acquired\n");
                 send(client->fd, "1", 1, 0);
+            }
             else
+            {
+                DEBUG_LOG("box acquired\n");
                 send(client->fd, "0", 1, 0);
+            }
         }
         else if (!strcmp(token->name, "Guess"))
         {
