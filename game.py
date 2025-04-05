@@ -121,14 +121,16 @@ def main():
                             active_box_index = None
 
             # Handle keyboard input
-            elif event.type == pg.KEYDOWN:
-                if event.key == pg.K_BACKSPACE:
-                    if active_box_index is not None:
-                        text[active_box_index] = ""
-                        if active_box_index > word_size:
+            elif event.type == pg.KEYDOWN and active_box_index is not None:
+                match event.key:
+                    case pg.K_BACKSPACE:
+                        if text[active_box_index] != "":
+                            text[active_box_index] = ""
+                        elif active_box_index > word_size:
                             active_box_index -= 1
-                elif event.key == pg.K_RETURN:
-                    if active_box_index is not None:
+                            text[active_box_index] = ""
+
+                    case pg.K_RETURN:
                         if active_box_index < word_size:
                             # submit letter guess
                             print(text[active_box_index])
@@ -150,16 +152,15 @@ def main():
                                 my_points += word_size - others_points
                             text[word_size:] = [""] * word_size
                             active_box_index = None
-                else:
-                    # Add the typed character to the active box
-                    if (
-                        active_box_index is not None
-                        and text[active_box_index] == ""
-                        and event.unicode.isalpha()
-                    ):
-                        text[active_box_index] = event.unicode
-                        if active_box_index in range(word_size, 2 * word_size - 1):
-                            active_box_index += 1
+                    case _:
+                        if not event.unicode.isalpha():
+                            break
+
+                        # Add the typed character to the active box
+                        if text[active_box_index] == "":
+                            text[active_box_index] = event.unicode
+                            if active_box_index in range (word_size, word_size * 2 - 1):
+                                active_box_index += 1
 
         # Clear the screen
         screen.fill((30, 30, 30))
@@ -174,7 +175,7 @@ def main():
                     text[i] = guess_state[i]
                 else:
                     left_to_guess += 1
-            
+
             others_points = word_size - left_to_guess - my_points
 
             print(guess_state)
