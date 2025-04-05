@@ -41,9 +41,10 @@ typedef struct server
 
     token_parser_t *token_parser;
     game_t *game;
-} server_t;
 
-static int started_client_cnt = 0;
+    int running_clients;
+    bool terminate;
+} server_t;
 
 static void server_init(server_t *server, uint16_t port, size_t num_clients)
 {
@@ -62,6 +63,8 @@ static void server_init(server_t *server, uint16_t port, size_t num_clients)
 
     server->token_parser = parser;
     server->game = game_create(word, num_clients, BOX_TIMEOUT_MS);
+    server->terminate = false;
+    server->running_clients = 0;
 
     free(word);
 
@@ -90,6 +93,21 @@ static void server_init(server_t *server, uint16_t port, size_t num_clients)
         handle_error("listen");
 }
 
+static void server_alert_client_started(server_t *server)
+{
+    DEBUG_LOG("client %d started\n", server->running_clients);
+    server->running_clients++;
+}
+
+static void server_alert_client_closed(server_t *server)
+{
+    server->running_clients--;
+    if (server->running_clients == 0)
+    {
+        DEBUG_LOG("Last client disconnected\n");
+    }
+}
+
 static void client_close_connection(client_t *client)
 {
     close(client->fd);
@@ -98,12 +116,10 @@ static void client_close_connection(client_t *client)
 
 static void *client_handler(void *arg)
 {
-    DEBUG_LOG("Starting client %d thread\n", started_client_cnt);
-    int client_index = started_client_cnt++;
-    (void)client_index;
-
     client_t *client = arg;
     server_t *server = client->server;
+
+    server_alert_client_started(server);
 
     ssize_t in_len;
     char in_buf[1024];
@@ -141,7 +157,6 @@ static void *client_handler(void *arg)
         if (!token)
             continue;
 
-        printf("client %d sent ", client_index);
         token_print(token);
 
         if (!strcmp(token->name, "Request_Box"))
@@ -180,6 +195,8 @@ static void *client_handler(void *arg)
         token_free(token);
     }
 
+    server_alert_client_closed(server);
+
     return NULL;
 }
 
@@ -204,7 +221,7 @@ int main(int argc, char *argv[])
 
     server_init(&server, port, client_cnt);
 
-    while (1)
+    while (!server.terminate)
     {
         int client_fd;
         struct sockaddr_in addr;
