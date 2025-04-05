@@ -78,4 +78,6 @@ char *game_get_boxes_state(game_t *game);
  */
 bool game_is_won(game_t *game);
 
+const char *game_get_word(game_t *game);
+
 #endif // __GAME_H__

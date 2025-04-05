@@ -235,3 +235,8 @@ char *game_get_boxes_state(game_t *game)
 {
     return strdup(game->boxes_state);
 }
+
+const char *game_get_word(game_t *game)
+{
+    return game->word;
+}

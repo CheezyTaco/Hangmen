@@ -49,11 +49,12 @@ static void server_init(server_t *server, uint16_t port, size_t num_clients)
 {
     token_parser_t *parser = token_parser_create(",");
 
-    token_parser_add_variant(parser, "RequestBox", PAYLOAD_TYPE_INT, PAYLOAD_TYPE_NONE);
-    token_parser_add_variant(parser, "Guess", PAYLOAD_TYPE_INT, PAYLOAD_TYPE_STR, PAYLOAD_TYPE_NONE);
-    token_parser_add_variant(parser, "RequestUpdate", PAYLOAD_TYPE_NONE);
-    token_parser_add_variant(parser, "GetWord", PAYLOAD_TYPE_NONE);
-    token_parser_add_variant(parser, "UnlockBox", PAYLOAD_TYPE_NONE);
+    token_parser_add_variant(parser, "Client_Ready", PAYLOAD_TYPE_STR, PAYLOAD_TYPE_NONE);
+    token_parser_add_variant(parser, "Request_Box", PAYLOAD_TYPE_INT, PAYLOAD_TYPE_NONE);
+    token_parser_add_variant(parser, "Guess", PAYLOAD_TYPE_STR, PAYLOAD_TYPE_INT, PAYLOAD_TYPE_NONE);
+    token_parser_add_variant(parser, "Request_Update", PAYLOAD_TYPE_NONE);
+    token_parser_add_variant(parser, "Get_Word", PAYLOAD_TYPE_NONE);
+    token_parser_add_variant(parser, "Unlock_Box", PAYLOAD_TYPE_NONE);
 
     char *word = dict_get_random_word_len_range(DICT_PATH, WORD_LEN_MIN, WORD_LEN_MAX);
 
@@ -104,13 +105,13 @@ static void *client_handler(void *arg)
     client_t *client = arg;
     server_t *server = client->server;
 
+    ssize_t in_len;
+    char in_buf[1024];
+
     // todo: receive player name here before entering game
 
     while (1)
     {
-        ssize_t in_len;
-        char in_buf[1024];
-
         in_len = recv(client->fd, in_buf, 1024, 0);
 
         if (in_len < 0)
@@ -133,6 +134,8 @@ static void *client_handler(void *arg)
 
         in_buf[in_len] = '\0';
 
+        DEBUG_LOG("received: %s\n", in_buf);
+
         token_t *token = token_parser_parse(server->token_parser, in_buf);
 
         if (!token)
@@ -141,7 +144,7 @@ static void *client_handler(void *arg)
         printf("client %d sent ", client_index);
         token_print(token);
 
-        if (!strcmp(token->name, "RequestBox"))
+        if (!strcmp(token->name, "Request_Box"))
         {
             if (game_request_box(server->game, client, token->payloads[0].int_val))
                 send(client->fd, "1", 1, 0);
@@ -152,22 +155,24 @@ static void *client_handler(void *arg)
         {
             if (game_guess(server->game,
                            client,
-                           token->payloads[0].int_val,
-                           token->payloads[1].string_val))
+                           token->payloads[1].int_val,
+                           token->payloads[0].string_val))
                 send(client->fd, "1", 1, 0);
             else
                 send(client->fd, "0", 1, 0);
         }
-        else if (!strcmp(token->name, "RequestUpdate"))
+        else if (!strcmp(token->name, "Request_Update"))
         {
             char *box_state = game_get_boxes_state(server->game);
             send(client->fd, box_state, strlen(box_state), 0);
             free(box_state);
         }
-        else if (!strcmp(token->name, "GetWord"))
+        else if (!strcmp(token->name, "Get_Word"))
         {
+            const char *word = game_get_word(server->game);
+            send(client->fd, word, strlen(word), 0);
         }
-        else if (!strcmp(token->name, "UnlockBox"))
+        else if (!strcmp(token->name, "Unlock_Box"))
         {
             game_unlock_boxes(server->game, client);
         }
