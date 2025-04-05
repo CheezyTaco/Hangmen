@@ -4,14 +4,15 @@ import time
 from Client import *
 
 words = ["banana", "cherry", "apple"]
-serverIP = "127.0.0.1"
-port = 5555
+SERVER_IP = "127.0.0.1"
+PORT = 5555
+REQUEST_RATE_NS = 250000000
 
 
 # Takes a point array and checks if each character is correctly guessed.
 def check_ans(char_dict):
     for i in char_dict:
-        if i == '-':
+        if i == "-":
             return False
     return True
 
@@ -19,15 +20,19 @@ def check_ans(char_dict):
 def main():
     # Connect to the server
 
-    global serverIP
-    global port
-    sfd = Connect(serverIP, port)
+    global SERVER_IP
+    global PORT
+    sfd = Connect(SERVER_IP, PORT)
     print("Connected to server")
 
     # Client receives a skeleton for the word
-    points = Request_Update(sfd)
-    word_size = len(points)  # Size of word
+    guess_state = Request_Update(sfd)
+    word_size = len(guess_state)  # Size of word
     print(word_size)
+
+    # Converts a box index to a lock index (boxes >= word_size correspond to the full box lock)
+    def box_to_lock(box_index):
+        return min(box_index, word_size)
 
     # Tell server that the player is ready
     # client_Ready(sfd, name)
@@ -65,11 +70,14 @@ def main():
 
     # Track which box is active (which box has this player earned the lock)
     active_box_index = None
-    text = [""] * (
-        word_size * 2
-    )  # Store text for each box individual box, and the full box
+
+    # Store text for each box individual box and the full box in the same list
+    text = [""] * (word_size * 2)
 
     last_update_request = 0
+
+    my_points = 0
+    others_points = 0
 
     # Game loop
     print("Game initialized")
@@ -98,11 +106,11 @@ def main():
                     active_box_index = None
                 else:
                     # clicked into a box
-                    collided_lock_index = min(collided_index, word_size)
+                    collided_lock_index = box_to_lock(collided_index)
 
                     # do we already have the lock for this box?
-                    if active_box_index is None or collided_lock_index != min(
-                        active_box_index, word_size
+                    if active_box_index is None or collided_lock_index != box_to_lock(
+                        active_box_index
                     ):
                         # if we don't have the lock, lose old locks and try to get it
                         Unlock_Box(sfd)
@@ -124,18 +132,22 @@ def main():
                         if active_box_index < word_size:
                             # submit letter guess
                             print(text[active_box_index])
-                            Guess(
+                            if Guess(
                                 sfd,
                                 text[active_box_index],
                                 min(active_box_index, word_size),
-                            )
+                            ):
+                                my_points += 1
                             text[active_box_index] = ""
                             active_box_index = None
                         elif active_box_index == len(text) - 1:
                             # submit full word guess
-                            Guess(
-                                sfd, ''.join(text[word_size:]), min(active_box_index, word_size)
-                            )
+                            if Guess(
+                                sfd,
+                                "".join(text[word_size:]),
+                                box_to_lock(active_box_index),
+                            ):
+                                my_points += word_size - others_points
                             text[word_size:] = [""] * word_size
                             active_box_index = None
                 else:
@@ -152,28 +164,36 @@ def main():
         # Clear the screen
         screen.fill((30, 30, 30))
 
-        # Update letter boxes (limit requests to every 250ms to avoid overloading server)
-        if time.monotonic_ns() - last_update_request > 250000000:
-            points = Request_Update(sfd)
+        # Update letter boxes (limit requests to avoid overloading server)
+        if time.monotonic_ns() - last_update_request > REQUEST_RATE_NS:
+            guess_state = Request_Update(sfd)
+
+            left_to_guess = 0
             for i in range(word_size):
-                if points[i] != "-":
-                    text[i] = points[i]
+                if guess_state[i] != "-":
+                    text[i] = guess_state[i]
+                else:
+                    left_to_guess += 1
+            
+            others_points = word_size - left_to_guess - my_points
 
-            print(points)
+            print(guess_state)
 
-            if check_ans(points):
+            if check_ans(guess_state):
+                print("The game was won!")
+                print("You have", int(my_points * 100 / word_size), "points")
                 done = True
 
             last_update_request = time.monotonic_ns()
 
         # Draw all boxes
         for i, box in enumerate(boxes):
-            color = (
-                color_active
-                if active_box_index is not None
-                and min(i, word_size) == min(active_box_index, word_size)
-                else color_inactive
-            )
+            color = color_inactive
+            if active_box_index is not None and box_to_lock(i) == box_to_lock(
+                active_box_index
+            ):
+                color = color_active
+
             pg.draw.rect(screen, color, box, 2)
 
             # Render the text for the current box
@@ -187,6 +207,7 @@ def main():
 
     # Quit Pygame
     pg.quit()
+    sfd.close()
 
 
 if __name__ == "__main__":
