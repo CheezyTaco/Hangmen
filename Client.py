@@ -72,6 +72,13 @@ def unlock_box(s):
     msg = f"unlock_box,dummy"
     s.send(msg.encode('utf-8'))
 
+# fullbox_complete
+# takes in socket object
+# a player guessed the whole word by fullbox. update the info to all players
+def fullbox_complete(s):
+    msg = f"fullbox_complete,dummy"
+    s.send(msg.encode('utf-8'))
+
 #Disconnect
 #takes in socket object
 #no return value, closes socket to server

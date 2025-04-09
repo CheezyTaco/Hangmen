@@ -62,9 +62,14 @@ def handle_client(client_socket, address):
 
             # unlock_box message: unlock any locks held by the player
             elif message[0] == "unlock_box":
-                for i in range(len(the_word)):
+                for i in range(len(the_word) + 1):
                     if locks[i] == address:
                         locks[i] = 0
+            
+            # fullbox_complete message: a player guessed the whole word by the fullbox. game will end
+            elif message[0] == "fullbox_complete":
+                for i in range(len(the_word)):
+                    the_points[i] = 1
 
         except ConnectionResetError:
             break
@@ -74,7 +79,7 @@ def handle_client(client_socket, address):
 
 
 def start_server(host='0.0.0.0', port=5555):
-    words = ["banana", "cherry", "apple"]
+    words = ["cheesecake", "potatochip", "applejuice"]
 
     global locks
     global the_word
