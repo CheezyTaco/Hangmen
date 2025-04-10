@@ -5,7 +5,7 @@ from Dict import *
 from Box import *
 
 MIN_WORD_LEN = 4
-MAX_WORD_LEN = 10
+MAX_WORD_LEN = 8
 
 boxes = []  # locks for each character box
 connected_count = 0
@@ -17,8 +17,8 @@ server_socket = None
 def init_game():
     global boxes
 
-    # get a random word from the dictionary with a length in the range [6,8]
-    the_word = Dict("test_dictionary.txt").get_random_word(6, 8)
+    # get a random word from the dictionary with a length in the range MIN_WORD_LEN to MAX_WORD_LEN
+    the_word = Dict("dictionary.txt").get_random_word(MIN_WORD_LEN, MAX_WORD_LEN)
     # the_word = Dict("dictionary.txt").get_random_word(6, 8)
 
     print("word:", the_word)

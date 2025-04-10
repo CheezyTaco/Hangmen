@@ -1,11 +1,12 @@
 import os
+import sys
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame as pg
 import random
 import time
 from Client import *
 
-SERVER_IP = "127.0.0.1"
+SERVER_IP = sys.argv[1]
 PORT = 5555
 REQUEST_RATE = 0.25
 
@@ -60,7 +61,7 @@ def main():
     font = pg.font.Font(None, 50)
     clock = pg.time.Clock()
 
-    client_names = ["red", "white", "green", "orange"]
+    client_names = ["red", "yellow", "green", "orange"]
     # Colors
     client_colors = [pg.Color(name) for name in client_names]
     color_inactive = pg.Color("darkgray")
@@ -172,6 +173,10 @@ def main():
             (_, full_box_state, _) = states[word_size]
             if check_ans(letter_boxes_state[:-1]) or full_box_state != "":
                 print("\nThe game was won!")
+                if (check_ans(letter_boxes_state[:-1])):
+                    print("The word was "+ "".join(letter_boxes_state[:-1]))
+                else:
+                    print("The word was "+ full_box_state)
                 points = [
                     sum([1 for (c, _, _) in states[:-1] if c == i])
                     for i in range(client_cnt)
