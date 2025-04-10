@@ -60,7 +60,7 @@ def main():
     font = pg.font.Font(None, 50)
     clock = pg.time.Clock()
 
-    client_names = ["red", "blue", "green", "yellow"]
+    client_names = ["red", "white", "green", "orange"]
     # Colors
     client_colors = [pg.Color(name) for name in client_names]
     color_inactive = pg.Color("darkgray")
@@ -170,7 +170,7 @@ def main():
             # Check if game won
             letter_boxes_state = [i for (_, i, _) in states]
             (_, full_box_state, _) = states[word_size]
-            if check_ans(letter_boxes_state) or full_box_state != "":
+            if check_ans(letter_boxes_state[:-1]) or full_box_state != "":
                 print("\nThe game was won!")
                 points = [
                     sum([1 for (c, _, _) in states[:-1] if c == i])

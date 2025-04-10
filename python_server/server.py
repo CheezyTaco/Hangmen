@@ -4,8 +4,8 @@ import threading
 from Dict import *
 from Box import *
 
-MIN_WORD_LEN = 5
-MAX_WORD_LEN = 8
+MIN_WORD_LEN = 4
+MAX_WORD_LEN = 10
 
 boxes = []  # locks for each character box
 connected_count = 0
