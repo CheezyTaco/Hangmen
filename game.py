@@ -61,7 +61,7 @@ def main():
     font = pg.font.Font(None, 50)
     clock = pg.time.Clock()
 
-    client_names = ["red", "yellow", "green", "orange"]
+    client_names = ["red", "yellow", "aqua", "orange"]
     # Colors
     client_colors = [pg.Color(name) for name in client_names]
     color_inactive = pg.Color("darkgray")
@@ -157,16 +157,18 @@ def main():
             (_, client_cnt, states) = Request_State(sfd)
 
             for i, (_, contents, owner_id) in enumerate(states):
-                if contents == "" and owner_id != my_id:
-                    if i == word_size:
-                        text[word_size:] = [""] * word_size
+                if owner_id != my_id:
+                    if contents == "":
+                        if active_box_index is not None and min(i, word_size) == min(
+                            active_box_index, word_size
+                        ):
+                            active_box_index = None
                     else:
-                        text[i] = ""
+                        if i == word_size:
+                            text[word_size:] = [""] * word_size
+                        else:
+                            text[i] = ""
 
-                    if active_box_index is not None and min(i, word_size) == min(
-                        active_box_index, word_size
-                    ):
-                        active_box_index = None
 
             # Check if game won
             letter_boxes_state = [i for (_, i, _) in states]
@@ -211,7 +213,7 @@ def main():
                 else:
                     txt_surface = font.render(contents[i - word_size], True, color)
                 screen.blit(txt_surface, (box.x + 15, box.y + 8))
-
+            
             # Render text typed out by player
             if text[i] != "":
                 txt_surface = font.render(text[i], True, (255, 255, 255))
