@@ -11,8 +11,10 @@ boxes = []  # locks for each character box
 connected_count = 0
 max_connected_count = 0
 connected_count_lock = threading.Lock()
+stop_running = False
+server_socket = None
 
-def init():
+def init_game():
     global boxes
 
     # get a random word from the dictionary with a length in the range [6,8]
@@ -125,18 +127,20 @@ def handle_client(client_socket, address):
 
 
 def start_server(host="0.0.0.0", port=5555):
+    global stop_running
+    global server_socket
     # Server setup on '0.0.0.0' and port 5555
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind((host, port))
-    server.listen(5)
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((host, port))
+    server_socket.listen(5)
 
     print(f"[*] Listening on {host}:{port}")
 
-    init()
+    init_game()
 
-    while True:
+    while not stop_running:
         # for each connected player, launch a thread for communicating with that player
-        client_socket, addr = server.accept()
+        client_socket, addr = server_socket.accept()
         client_handler = threading.Thread(
             target=handle_client, args=(client_socket, addr)
         )
@@ -144,4 +148,10 @@ def start_server(host="0.0.0.0", port=5555):
 
 
 if __name__ == "__main__":
-    start_server()
+    try:
+        start_server()
+    except KeyboardInterrupt:
+        print("\nShutting Down Server")
+        server_socket.close()
+        stop_running = True
+        
