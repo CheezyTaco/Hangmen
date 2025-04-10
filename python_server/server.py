@@ -4,7 +4,7 @@ import threading
 from Dict import *
 from Box import *
 
-MIN_WORD_LEN = 4
+MIN_WORD_LEN = 5
 MAX_WORD_LEN = 8
 
 boxes = []  # locks for each character box
