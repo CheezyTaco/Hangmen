@@ -1,9 +1,10 @@
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame as pg
 import random
 import time
 from Client import *
 
-words = ["banana", "cherry", "apple"]
 SERVER_IP = "127.0.0.1"
 PORT = 5555
 REQUEST_RATE = 0.25
@@ -12,7 +13,7 @@ REQUEST_RATE = 0.25
 # Takes a point array and checks if each character is correctly guessed.
 def check_ans(char_dict):
     for i in char_dict:
-        if i == "-":
+        if i == "":
             return False
     return True
 
@@ -22,20 +23,17 @@ def main():
 
     global SERVER_IP
     global PORT
+    global REQUEST_RATE
+
     sfd = Connect(SERVER_IP, PORT)
-    print("Connected to server")
 
-    # Client receives a skeleton for the word
-    guess_state = Request_Update(sfd)
-    word_size = len(guess_state)  # Size of word
-    print(word_size)
+    # receive assigned id from server
+    my_id = int(sfd.recv(1024).decode("utf-8"))
 
-    # Converts a box index to a lock index (boxes >= word_size correspond to the full box lock)
-    def box_to_lock(box_index):
-        return min(box_index, word_size)
+    print("Connected to server. Server gave me id", my_id)
 
-    # Tell server that the player is ready
-    # client_Ready(sfd, name)
+    # Client receives a state with word size, client count, and box states
+    (word_size, _, states) = Request_State(sfd)
 
     box_size = 50  # Size of each square box
     gap = 5  # Gap between boxes
@@ -56,29 +54,24 @@ def main():
         box = pg.Rect(x, y_fullbox, box_size, box_size)
         boxes.append(box)
 
-    print(len(boxes))
-
     # Initialize Pygame
     pg.init()
     screen = pg.display.set_mode((640, 480))
-    font = pg.font.Font(None, 32)
+    font = pg.font.Font(None, 50)
     clock = pg.time.Clock()
 
+    client_names = ["red", "blue", "green", "yellow"]
     # Colors
-    color_inactive = pg.Color("lightskyblue3")
-    color_active = pg.Color("dodgerblue2")
+    client_colors = [pg.Color(name) for name in client_names]
+    color_inactive = pg.Color("darkgray")
 
-    # Track which box is active (which box has this player earned the lock)
+    # Track which box is active (which box is the player currently typing in)
     active_box_index = None
 
     # Store text for each box individual box and the full box in the same list
     text = [""] * (word_size * 2)
 
     last_update_at = 0
-    box_locked_at = 0
-
-    my_points = 0
-    others_points = 0
 
     # Game loop
     print("Game initialized")
@@ -103,24 +96,19 @@ def main():
                 if collided_index is None:
                     # clicked outside of any box
                     if active_box_index is not None:
-                        Unlock_Box(sfd)
-                    active_box_index = None
-                else:
-                    # clicked into a box
-                    collided_lock_index = box_to_lock(collided_index)
-
-                    # do we already have the lock for this box?
-                    if active_box_index is None or collided_lock_index != box_to_lock(
-                        active_box_index
-                    ):
-                        # if we don't have the lock, lose old locks and try to get it
-                        Unlock_Box(sfd)
-                        if Request_Box(sfd, str(collided_lock_index)):
-                            print("got lock ", collided_index)
-                            box_locked_at = time.monotonic()
-                            active_box_index = collided_index
+                        if active_box_index < word_size:
+                            text[active_box_index] = ""
                         else:
-                            active_box_index = None
+                            text[word_size:] = [""] * word_size
+                    Unlock_Box(sfd)
+                    active_box_index = None
+                elif not Have_Box(sfd, str(collided_index)):
+                    # if we don't have the box, unlock any held box and try to get it
+                    Unlock_Box(sfd)
+                    if Request_Box(sfd, str(collided_index)):
+                        active_box_index = min(collided_index, word_size)
+                    else:
+                        active_box_index = None
 
             # Handle keyboard input
             elif event.type == pg.KEYDOWN and active_box_index is not None:
@@ -135,24 +123,20 @@ def main():
                     case pg.K_RETURN:
                         if active_box_index < word_size:
                             # submit letter guess
-                            print(text[active_box_index])
-                            if Guess(
+                            Guess(
                                 sfd,
-                                text[active_box_index],
                                 min(active_box_index, word_size),
-                            ):
-                                my_points += 1
-                            text[active_box_index] = ""
+                                text[active_box_index],
+                            )
+                            # after submitting a guess, we lose the box
                             active_box_index = None
                         elif active_box_index == len(text) - 1:
                             # submit full word guess
-                            if Guess(
+                            Guess(
                                 sfd,
+                                active_box_index,
                                 "".join(text[word_size:]),
-                                box_to_lock(active_box_index),
-                            ):
-                                my_points += word_size - others_points
-                            text[word_size:] = [""] * word_size
+                            )
                             active_box_index = None
                     case _:
                         if not event.unicode.isalpha():
@@ -160,57 +144,73 @@ def main():
 
                         # Add the typed character to the active box
                         if text[active_box_index] == "":
-                            text[active_box_index] = event.unicode
-                            if active_box_index in range (word_size, word_size * 2 - 1):
+                            text[active_box_index] = event.unicode.lower()
+                            if active_box_index in range(word_size, word_size * 2 - 1):
                                 active_box_index += 1
 
         # Clear the screen
         screen.fill((30, 30, 30))
 
-        # timeout lock after 5 seconds
-        if active_box_index is not None and time.monotonic() - box_locked_at > 5:
-            if active_box_index in range(word_size, word_size *2):
-                text[word_size:] = [""] * word_size
-            else:
-                text[active_box_index] = ""
-            active_box_index = None
-
-        # Update letter boxes (limit requests to avoid overloading server)
+        # Get state update from server (limit request rate to avoid overloading server)
         if time.monotonic() - last_update_at > REQUEST_RATE:
-            guess_state = Request_Update(sfd)
+            (_, client_cnt, states) = Request_State(sfd)
 
-            left_to_guess = 0
-            for i in range(word_size):
-                if guess_state[i] != "-":
-                    text[i] = guess_state[i]
-                else:
-                    left_to_guess += 1
+            for i, (_, contents, owner_id) in enumerate(states):
+                if contents == "" and owner_id != my_id:
+                    if i == word_size:
+                        text[word_size:] = [""] * word_size
+                    else:
+                        text[i] = ""
 
-            others_points = word_size - left_to_guess - my_points
+                    if active_box_index is not None and min(i, word_size) == min(
+                        active_box_index, word_size
+                    ):
+                        active_box_index = None
 
-            print(guess_state)
+            # Check if game won
+            letter_boxes_state = [i for (_, i, _) in states]
+            (_, full_box_state, _) = states[word_size]
+            if check_ans(letter_boxes_state) or full_box_state != "":
+                print("\nThe game was won!")
+                points = [
+                    sum([1 for (c, _, _) in states[:-1] if c == i])
+                    for i in range(client_cnt)
+                ]
+                full_box_winner = states[-1][0]
+                if full_box_winner != -1:
+                    points[full_box_winner] += word_size - sum(points)
 
-            if check_ans(guess_state):
-                print("The game was won!")
-                print("You have", int(my_points * 100 / word_size), "points")
+                for i, name in enumerate(client_names[:client_cnt]):
+                    print(name, ":", int(points[i] * 100 / word_size), "points")
+
                 done = True
 
             last_update_at = time.monotonic()
 
         # Draw all boxes
         for i, box in enumerate(boxes):
+            (correct_guesser_id, contents, owner_id) = states[min(i, word_size)]
             color = color_inactive
-            if active_box_index is not None and box_to_lock(i) == box_to_lock(
-                active_box_index
-            ):
-                color = color_active
+
+            if correct_guesser_id != -1:
+                color = client_colors[correct_guesser_id]
+            elif owner_id != -1:
+                color = client_colors[owner_id]
 
             pg.draw.rect(screen, color, box, 2)
 
-            # Render the text for the current box
+            # Render text from the game state
+            if contents != "":
+                if i < word_size:
+                    txt_surface = font.render(contents, True, color)
+                else:
+                    txt_surface = font.render(contents[i - word_size], True, color)
+                screen.blit(txt_surface, (box.x + 15, box.y + 8))
+
+            # Render text typed out by player
             if text[i] != "":
                 txt_surface = font.render(text[i], True, (255, 255, 255))
-                screen.blit(txt_surface, (box.x + 10, box.y + 10))
+                screen.blit(txt_surface, (box.x + 15, box.y + 8))
 
         # Update the display
         pg.display.flip()
