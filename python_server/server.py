@@ -15,8 +15,10 @@ connected_count_lock = threading.Lock()
 def init():
     global boxes
 
-    the_word = Dict("test_dictionary.txt").get_random_word(6, 8)  # choose the random word
-    # the_word = "banana"
+    # get a random word from the dictionary with a length in the range [6,8]
+    the_word = Dict("test_dictionary.txt").get_random_word(6, 8)
+    # the_word = Dict("dictionary.txt").get_random_word(6, 8)
+
     print("word:", the_word)
 
     # initialize boxes with the word
@@ -37,6 +39,9 @@ def handle_client(client_socket, address):
             client_id = connected_count
             client_socket.send((f"%s" % client_id).encode("utf-8"))
             connected_count += 1
+
+            # keep track of the max number of connections, so clients can know how
+            # many other clients are/were in the game
             max_connected_count = max(connected_count, max_connected_count)
     except ConnectionResetError:
         client_socket.close()
@@ -51,6 +56,7 @@ def handle_client(client_socket, address):
 
             # split the message
             message = message.strip().split(",")
+
             token_name = message[0]
 
             # Request box message (message[1]: the ith box)
@@ -110,10 +116,10 @@ def handle_client(client_socket, address):
     # update connected client count
     with connected_count_lock:
         connected_count -= 1
-        # when connected client count drops to 0, reset the game
+        # when connected client count drops to 0, reset the game (get new word)
         if connected_count == 0:
             max_connected_count = 0
-            init()
+            init_game()
 
     client_socket.close()
 
