@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <sys/queue.h>
+include <sys/queue.h>
 
 typedef struct token_variant_s
 {
