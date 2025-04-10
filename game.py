@@ -64,7 +64,7 @@ def main():
         font = pg.font.Font(None, 50)
         clock = pg.time.Clock()
 
-        client_names = ["red", "yellow", "green", "orange"]
+        client_names = ["red", "yellow", "aqua", "orange"]
         # Colors
         client_colors = [pg.Color(name) for name in client_names]
         color_inactive = pg.Color("darkgray")
@@ -206,18 +206,18 @@ def main():
                     color = client_colors[owner_id]
 
                 pg.draw.rect(screen, color, box, 2)
-
+                
+                # Render text typed out by player
+                if text[i] != "":
+                    txt_surface = font.render(text[i], True, (255, 255, 255))
+                    screen.blit(txt_surface, (box.x + 15, box.y + 8))
+                    
                 # Render text from the game state
                 if contents != "":
                     if i < word_size:
                         txt_surface = font.render(contents, True, color)
                     else:
                         txt_surface = font.render(contents[i - word_size], True, color)
-                    screen.blit(txt_surface, (box.x + 15, box.y + 8))
-
-                # Render text typed out by player
-                if text[i] != "":
-                    txt_surface = font.render(text[i], True, (255, 255, 255))
                     screen.blit(txt_surface, (box.x + 15, box.y + 8))
 
             # Update the display
