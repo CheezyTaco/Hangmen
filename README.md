@@ -1,4 +1,5 @@
 # Hangmen 
+Multiplayer Hangmen game using multi-threading and TCP  
 
 # Running the Game
     Start the server.py file in python_server.
